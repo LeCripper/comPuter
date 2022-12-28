@@ -1,0 +1,204 @@
+#CODE OWNED BY AGENTCRIPPER
+# YOU ARE ALLOWED TO USE THIS CODE, BUT DO NOT CLAIM IT AS YOUR OWN.
+
+# Plugins:
+
+# SkUtilities
+# Skript
+
+command /computer [<text>]:
+	permission: op
+	trigger:
+		if arg-1 is set:
+			if arg-1 is "run":
+				send " " to player
+				send "&a&lRunning & Parsing..." to player
+				send " " to player
+				set {_content::*} to file contents of "plugins/Skript/scripts/comPuter"
+				set {_line} to 0
+				set {loop::%player%} to true
+				loop {_content::*}:
+					{loop::%player%} is set
+					send " " to player
+					send "&8| &f&lLine &b%{_line}+1%&f:" to player
+					send " " to player
+					if loop-value starts with "print(""":
+						set {_code} to loop-value
+						replace all "print(""", """)" with "" in {_code}
+						print({_code}, player)
+					else if loop-value starts with "run_program(":
+						set {_code} to loop-value
+						replace all "run_program(", ")" with "" in {_code}
+						replace all """" with "" in {_code}
+						if {_code} is "time":
+							set {Program::%player%} to "time"
+							print("-------time: {time}", player)
+						else if {_code} is "testgame":
+							set {Program::%player%} to "testgame"
+							testgame(player)
+					else if loop-value starts with "wait(":
+						set {_code} to loop-value
+						replace all "wait(", ")" with "" in {_code}
+						set {_code} to {_code} parsed as an number
+						wait "%{_code}% seconds" parsed as timespan
+						send "&b» &f&lWaiting &e%{_code}% &fseconds." to player
+					else if loop-value starts with "@":
+						loop-value contains "Input"
+						set {InputDetector::%player%} to true
+						send "&b» &f&lOK. &fNow detecting keyboard input." to player
+					else if loop-value starts with ">":
+						set {_code} to loop-value
+						replace all ">" with "" in {_code}
+						if {InputDetector::%player%} is set:
+							set {InputDetector::%player%} to {_code}
+					else if loop-value starts with "terminate(":
+						set {_code} to loop-value
+						replace all "terminate(", ")" with "" in {_code}
+						if {_code} is "true":
+							terminate(player, true)
+						else if {_code} is "false":
+							terminate(player, false)
+					else:
+						send "&b» &c❌ &cCan't understand: ""%{_content::%{_line}%}%""" to player
+					add 1 to {_line}
+				terminate(player, false)
+
+function testgame(P: player):
+	terminate({_p}, false)
+	print("--------test", {_p})
+
+on any move:
+	if block 0.0 below player is stone pressure plate:
+		if {InputDetector::%player%} is set:
+			if {InputDetector::%player%} starts with "print(":
+				replace all "print(", ")" with "" in {InputDetector::%player%}
+				replace all """" with "" in {InputDetector::%player%}
+				print("%{InputDetector::%player%}%", player)
+
+
+function terminate(P: player, MSG: boolean):
+	delete {Program::%{_p}%}
+	delete {loop::%{_p}%}
+	delete {InputDetector::%{_p}%}
+	if {_MSG} is true:
+		send "&b» &e✔ &f&lParsing session terminated." to {_p}
+		send " " to {_p}
+	loop {PC::TextBlocks::*}:
+		set block at loop-value to white wool
+		loop all blocks in radius 50 of loop-value:
+			if loop-block is redstone lamp:
+				if block 1 behind loop-block is redstone block:
+					set block 1 behind loop-block to air
+					turn off loop-block
+		wait 3 ticks
+		loop {DriverLocations::*}:
+			set block at loop-value-2 to white wool
+		delete {PC::TextBlocks::*}
+
+function print(CODE: text, P: player):
+	if {_p}'s world is "spawn":
+		if {_code} contains "{time}":
+			set {_time} to "%now%"
+			set {_time::*} to {_time} split at " "
+			set {_time} to {_time::2}
+			replace all " " with "" in {_time}
+			set {_time::*} to {_time} split at ":"
+			set {_time::1} to {_time::1} parsed as a number + 2
+			set {_time} to "%{_time::1}%:%{_time::2}%"
+			replace all "{time}" with "%{_time}%" in {_code}
+		send "&b» &f&lNow attempting to print the requested string." to {_p}
+		replace all "x" with "x " in {_code}
+		replace all "g" with "g " in {_code} 
+		replace all "w" with "w " in {_code}
+		replace all "o" with "o " in {_code}
+		set {_text::*} to {_code} split at ""
+		set {_xtrablocks} to 0
+		replace all ":" with "symbol_1" in {_text::*}
+		replace all "1" with "i" in {_text::*}
+		replace all "=" with "symbol_11" in {_text::*}
+		replace all ")" with "symbol_111" in {_text::*}	
+		replace all "!" with "symbol_1111" in {_text::*}
+		replace all "?" with "symbol_11111" in {_text::*}
+		replace all "*" with "symbol_1111111" in {_text::*}
+		replace all "." with "symbol_111111" in {_text::*}
+		set {_textline} to 0
+		loop {_text::*}:
+			delete {_found}
+			set {_loop} to true
+			loop {DriverLocations::*}:
+				block at loop-value-2 is white wool
+				{_loop} is set
+				loop-value-2's y coordinate is greater than 86
+				loop all blocks in radius 2 of loop-value-2:
+					if loop-block is redstone block:
+						set {_confirmation} to true
+				{_confirmation} is set
+				set {_found} to true
+				set block at loop-value-2 to air
+				delete {_loop}
+				add block at loop-value-2 to {PC::TextBlocks::*}
+				if loop-value-1 isn't "9" or "5" or "3" or "4" or "8" or "2" or "g" or "symbol_11111":
+					if loop-value-1 isn't "-" or "1":
+						load "pc_%loop-value-1%" at block 1 east block 3 below loop-value-2
+					else:
+						load "pc_%loop-value-1%" at block 1 east block 0.5 below loop-value-2
+				else:
+					if loop-value-1 isn't "symbol_11111":
+						load "pc_%loop-value-1%" at block 1 east block 4 below loop-value-2
+					else:
+						load "pc_%loop-value-1%" at block 1 east block 5 below loop-value-2
+			if {_found} is not set:
+				set {_loop} to true
+				loop {DriverLocations::*}:
+					block at loop-value-2 is white wool
+					{_loop} is set
+					loop-value-2's y coordinate is greater than 82
+					loop all blocks in radius 2 of loop-value-2:
+						if loop-block is redstone block:
+							set {_confirmation} to true
+					{_confirmation} is set
+					set {_found} to true
+					set block at loop-value-2 to air
+					delete {_loop}
+					add block at loop-value-2 to {PC::TextBlocks::*}
+					if loop-value-1 isn't "9" or "5" or "3" or "4" or "8" or "2" or "p" or "g" or "symbol_11111":
+						if loop-value-1 isn't "-":
+							load "pc_%loop-value-1%" at block 1 east block 5 below loop-value-2
+						else:
+							load "pc_%loop-value-1%" at block 6 east block 3.5 below loop-value-2
+					else:
+						load "pc_%loop-value-1%" at block 1 east block 7 below loop-value-2
+			if {_found} is not set:
+				set {_loop} to true
+				loop {DriverLocations::*}:
+					block at loop-value-2 is white wool
+					{_loop} is set
+					loop-value-2's y coordinate is greater than 75
+					loop all blocks in radius 2 of loop-value-2:
+						if loop-block is redstone block:
+							set {_confirmation} to true
+					{_confirmation} is set
+					set {_found} to true
+					set block at loop-value-2 to air
+					delete {_loop}
+					add loop-value-2 to {PC::TextBlocks::*}
+					if loop-value-1 isn't "9" or "5" or "2" or "s" or "g" or "symbol_11111" or "1":
+						if loop-value-1 isn't "-":
+							load "pc_%loop-value-1%" at block 1 east block 1 below loop-value-2
+						else:
+							load "pc_%loop-value-1%" at block 1 east block 1.5 below loop-value-2
+					else:
+						load "pc_%loop-value-1%" at block 1 east block 2 below loop-value-2
+			add 1 to {_textline}
+
+
+
+command /setpc:
+	permission: op
+	trigger:
+		loop all blocks in radius 32 of player:
+			if loop-block is white wool:
+				add location of loop-block to {DriverLocations::*}
+		send "&eOK." to player
+
+	
