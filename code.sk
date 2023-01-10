@@ -15,6 +15,7 @@ command /computer [<text>]:
 				send "&a&lRunning & Parsing..." to player
 				send " " to player
 				set {_content::*} to file contents of "plugins/Skript/scripts/comPuter"
+				delete {body::%player%}
 				set {_line} to 0
 				set {loop::%player%} to true
 				loop {_content::*}:
@@ -32,25 +33,38 @@ command /computer [<text>]:
 						replace all """" with "" in {_code}
 						if {_code} is "time":
 							set {Program::%player%} to "time"
-							print("-------time: {time}", player)
-						else if {_code} is "testgame":
-							set {Program::%player%} to "testgame"
-							testgame(player)
+							print("--------time: {time}", player)
 					else if loop-value starts with "wait(":
 						set {_code} to loop-value
 						replace all "wait(", ")" with "" in {_code}
 						set {_code} to {_code} parsed as an number
 						wait "%{_code}% seconds" parsed as timespan
 						send "&b» &f&lWaiting &e%{_code}% &fseconds." to player
-					else if loop-value starts with "@":
-						loop-value contains "Input"
-						set {InputDetector::%player%} to true
-						send "&b» &f&lOK. &fNow detecting keyboard input." to player
-					else if loop-value starts with ">":
+					else if loop-value starts with "fetch(""":
 						set {_code} to loop-value
-						replace all ">" with "" in {_code}
-						if {InputDetector::%player%} is set:
-							set {InputDetector::%player%} to {_code}
+						replace all "fetch(", ")", """" with "" in {_code}
+						send "&b» &f&lFetching &e%{_code}%&f&l..."
+						execute console command "!send request to ""%{_code}%"""
+						set {_body} to the last received http web response's body
+						set {body::%player%} to {_body}
+					else if loop-value starts with ">":
+						if loop-value starts with ">splitAt(""":
+							set {_code} to loop-value
+							set {_ogcode} to loop-value
+							replace all ">splitAt(""", """", ")" with "" in {_code}
+							replace all "'" with """" in {_code}
+							set {_code::*} to {_code} split at ","
+							set {_code} to "%{_code::1}%"
+							if {body::%player%} is set:
+								set {_bod::*} to {body::%player%} split at "%{_code}%"
+								if {_ogcode} ends with "1)":
+									set {body::%player%} to {_bod::1}
+								else if {_ogcode} ends with "2)":
+									set {body::%player%} to {_bod::2}
+								else if {_ogcode} ends with "&)":
+									set {body::%player%} to "%{_bod::1}%%{_bod::2}%"
+							else:
+								send "&b» &c❌ &cNo fetching request found." to player
 					else if loop-value starts with "terminate(":
 						set {_code} to loop-value
 						replace all "terminate(", ")" with "" in {_code}
@@ -62,18 +76,6 @@ command /computer [<text>]:
 						send "&b» &c❌ &cCan't understand: ""%{_content::%{_line}%}%""" to player
 					add 1 to {_line}
 				terminate(player, false)
-
-function testgame(P: player):
-	terminate({_p}, false)
-	print("--------test", {_p})
-
-on any move:
-	if block 0.0 below player is stone pressure plate:
-		if {InputDetector::%player%} is set:
-			if {InputDetector::%player%} starts with "print(":
-				replace all "print(", ")" with "" in {InputDetector::%player%}
-				replace all """" with "" in {InputDetector::%player%}
-				print("%{InputDetector::%player%}%", player)
 
 
 function terminate(P: player, MSG: boolean):
@@ -95,8 +97,22 @@ function terminate(P: player, MSG: boolean):
 			set block at loop-value-2 to white wool
 		delete {PC::TextBlocks::*}
 
+command /setup:
+	permission: op
+	trigger:
+		delete {DriverLocations::*}
+		loop all blocks in radius 32 of player:
+			if loop-block is white wool:
+				send "%loop-block%" to player
+				add location of loop-block to {DriverLocations::*}
+
 function print(CODE: text, P: player):
 	if {_p}'s world is "spawn":
+		replace all "{player}" with "%{_p}%" in {_code}
+		if {body::%{_p}%} is set:
+			replace all "{body}" with "%{body::%{_p}%}%" in {_code}
+		else:
+			replace all "{body}" with "Null" in {_code}
 		if {_code} contains "{time}":
 			set {_time} to "%now%"
 			set {_time::*} to {_time} split at " "
@@ -106,21 +122,30 @@ function print(CODE: text, P: player):
 			set {_time::1} to {_time::1} parsed as a number + 2
 			set {_time} to "%{_time::1}%:%{_time::2}%"
 			replace all "{time}" with "%{_time}%" in {_code}
+		if {_code} contains "{date}":
+			set {_time} to "%now%"
+			set {_time::*} to {_time} split at " "
+			set {_time } to {_time::1}
+			replace all "," with "" in {_time}
+			replace all "{date}" with "%{_time}%" in {_code}
+		set {_code} to lowercase {_code}
 		send "&b» &f&lNow attempting to print the requested string." to {_p}
 		replace all "x" with "x " in {_code}
 		replace all "g" with "g " in {_code} 
 		replace all "w" with "w " in {_code}
 		replace all "o" with "o " in {_code}
+		#replace all "m" with "m " in {_code}
 		set {_text::*} to {_code} split at ""
 		set {_xtrablocks} to 0
 		replace all ":" with "symbol_1" in {_text::*}
 		replace all "1" with "i" in {_text::*}
 		replace all "=" with "symbol_11" in {_text::*}
-		replace all ")" with "symbol_111" in {_text::*}	
+		replace all ")" with "symbol_111" in {_text::*}
 		replace all "!" with "symbol_1111" in {_text::*}
 		replace all "?" with "symbol_11111" in {_text::*}
 		replace all "*" with "symbol_1111111" in {_text::*}
 		replace all "." with "symbol_111111" in {_text::*}
+		replace all "/" with "symbol_111111111" in {_text::*}
 		set {_textline} to 0
 		loop {_text::*}:
 			delete {_found}
@@ -137,11 +162,14 @@ function print(CODE: text, P: player):
 				set block at loop-value-2 to air
 				delete {_loop}
 				add block at loop-value-2 to {PC::TextBlocks::*}
-				if loop-value-1 isn't "9" or "5" or "3" or "4" or "8" or "2" or "g" or "symbol_11111":
-					if loop-value-1 isn't "-" or "1":
+				if loop-value-1 isn't "9" or "4" or "g" or "symbol_11111" or "d":
+					if loop-value-1 isn't "-" or "1" or "symbol_111111111":
 						load "pc_%loop-value-1%" at block 1 east block 3 below loop-value-2
 					else:
-						load "pc_%loop-value-1%" at block 1 east block 0.5 below loop-value-2
+						if loop-value-1 isn't "symbol_111111111":
+							load "pc_%loop-value-1%" at block 1 east block 0.5 below loop-value-2
+						else:
+							load "pc_%loop-value-1%" at block 1 east block 3 below loop-value-2
 				else:
 					if loop-value-1 isn't "symbol_11111":
 						load "pc_%loop-value-1%" at block 1 east block 4 below loop-value-2
@@ -161,11 +189,14 @@ function print(CODE: text, P: player):
 					set block at loop-value-2 to air
 					delete {_loop}
 					add block at loop-value-2 to {PC::TextBlocks::*}
-					if loop-value-1 isn't "9" or "5" or "3" or "4" or "8" or "2" or "p" or "g" or "symbol_11111":
-						if loop-value-1 isn't "-":
+					if loop-value-1 isn't "9" or "5" or "3" or "4" or "8" or "2" or "p" or "symbol_11111":
+						if loop-value-1 isn't "-" or "symbol_111111111":
 							load "pc_%loop-value-1%" at block 1 east block 5 below loop-value-2
 						else:
-							load "pc_%loop-value-1%" at block 6 east block 3.5 below loop-value-2
+							if loop-value-1 isn't "symbol_111111111":
+								load "pc_%loop-value-1%" at block 6 east block 3.5 below loop-value-2
+							else:
+								load "pc_%loop-value-1%" at block 7 below loop-value-2
 					else:
 						load "pc_%loop-value-1%" at block 1 east block 7 below loop-value-2
 			if {_found} is not set:
@@ -182,7 +213,7 @@ function print(CODE: text, P: player):
 					set block at loop-value-2 to air
 					delete {_loop}
 					add loop-value-2 to {PC::TextBlocks::*}
-					if loop-value-1 isn't "9" or "5" or "2" or "s" or "g" or "symbol_11111" or "1":
+					if loop-value-1 isn't "9" or "5" or "2" or "s" or "g" or "symbol_11111" or "1" or "symbol_111111111" or "3" or "_" or "u":
 						if loop-value-1 isn't "-":
 							load "pc_%loop-value-1%" at block 1 east block 1 below loop-value-2
 						else:
@@ -190,15 +221,3 @@ function print(CODE: text, P: player):
 					else:
 						load "pc_%loop-value-1%" at block 1 east block 2 below loop-value-2
 			add 1 to {_textline}
-
-
-
-command /setpc:
-	permission: op
-	trigger:
-		loop all blocks in radius 32 of player:
-			if loop-block is white wool:
-				add location of loop-block to {DriverLocations::*}
-		send "&eOK." to player
-
-	
